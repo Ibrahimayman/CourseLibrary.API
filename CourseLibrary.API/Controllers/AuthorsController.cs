@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using CourseLibrary.API.Helpers;
 using CourseLibrary.API.Models;
+using CourseLibrary.API.ResourceParamters;
 using CourseLibrary.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -27,13 +28,13 @@ namespace CourseLibrary.API.Controllers
 
         [HttpGet()]
         [HttpHead]
-        public ActionResult<IEnumerable<AuthorDto>> GetAuthors()
+        public ActionResult<IEnumerable<AuthorDto>> GetAuthors([FromQuery]AuthorsResourceParamters authorsResourceParamters)
         {
-            var authorsFromRepo = _courseLibraryRepository.GetAuthors();
+            var authorsFromRepo = _courseLibraryRepository.GetAuthors(authorsResourceParamters);
             return Ok(_mapper.Map<IEnumerable<AuthorDto>>(authorsFromRepo));
         }
 
-        [HttpGet("{authorId}")]
+        [HttpGet("{authorId}",Name = "GetAutor")]
         public IActionResult GetAuthor(Guid authorId)
         {
             var authorFromRepo = _courseLibraryRepository.GetAuthor(authorId);
@@ -45,5 +46,31 @@ namespace CourseLibrary.API.Controllers
              
             return Ok(_mapper.Map<AuthorDto>(authorFromRepo));
         }
+
+
+        [HttpPost]
+        public ActionResult<AuthorDto> CreateAuthor(AuthorForCreationDto author) {
+            var authorEntity = _mapper.Map<Entities.Author>(author);
+            _courseLibraryRepository.AddAuthor(authorEntity);
+            _courseLibraryRepository.Save();
+            
+            var authorToReturn = _mapper.Map<Models.AuthorDto>(authorEntity);
+            return CreatedAtRoute("GetAutor", new { authorId = authorToReturn.Id }, authorToReturn);
+        }
+
+
+
+        [HttpPost]
+        public ActionResult<IEnumerable<CourseDto>> CeateCourseForAuthor(Guid authorId, CourseForCreationDto course) {
+            if (_courseLibraryRepository.AuthorExists(authorId)) return NotFound();
+            var courseEntity = _mapper.Map<Entities.Course>(course);
+            _courseLibraryRepository.AddCourse(authorId, courseEntity);
+            _courseLibraryRepository.Save();
+            
+            var courseToReturn = _mapper.Map<Models.CourseDto>(courseEntity);
+            return CreatedAtRoute("GetCourseForAuthor", new { courseId = courseToReturn.Id }, courseToReturn);
+        }
+
+
     }
 }
